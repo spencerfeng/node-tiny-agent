@@ -20,5 +20,8 @@
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1"
+  },
+  "dependencies": {
+    "openai": "^6.44.0"
   }
 }
