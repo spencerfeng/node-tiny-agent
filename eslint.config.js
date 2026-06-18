@@ -8,11 +8,17 @@ export default tseslint.config(
       "@stylistic": stylistic,
     },
     rules: {
-      "@stylistic/quotes": ["error", "double"],
-      "@stylistic/semi": ["error", "never"],
-      "@stylistic/object-curly-spacing": ["error", "always"],
-      "@stylistic/array-bracket-spacing": ["error", "always"],
-      "@stylistic/comma-dangle": ["error", "always"],
+      "@stylistic/quotes": [ "error", "double" ],
+      "@stylistic/semi": [ "error", "never" ],
+      "@stylistic/object-curly-spacing": [ "error", "always" ],
+      "@stylistic/array-bracket-spacing": [ "error", "always" ],
+      "@stylistic/comma-dangle": [ "error", {
+        arrays: "never",
+        objects: "always",
+        imports: "always",
+        exports: "always",
+        functions: "never",
+      } ],
     },
-  },
+  }
 )
