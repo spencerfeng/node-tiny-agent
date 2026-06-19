@@ -1,7 +1,7 @@
 import OpenAI from "openai"
 import type { ChatCompletionMessageParam, } from "openai/resources/chat/completions"
 import type { LLMProvider, } from "./provider.js"
-import type { Message, ToolDefinition, } from "./types.js"
+import type { Message, ToolDefinition, } from "../../types.js"
 
 export class OpenRouterProvider implements LLMProvider {
   private client: OpenAI
