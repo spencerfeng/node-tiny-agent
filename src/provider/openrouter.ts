@@ -1,7 +1,7 @@
 import OpenAI from "openai"
-import type { ChatCompletionMessageParam, } from "openai/resources/chat/completions"
-import type { LLMProvider, } from "./provider.js"
-import type { Message, ToolDefinition, } from "@/types.js"
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
+import type { LLMProvider } from "./provider.js"
+import type { Message, ToolDefinition } from "@/types.js"
 
 export class OpenRouterProvider implements LLMProvider {
   private client: OpenAI
@@ -13,7 +13,7 @@ export class OpenRouterProvider implements LLMProvider {
 
     this.client = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
-      apiKey
+      apiKey,
     })
     this.model = model
   }
@@ -26,23 +26,23 @@ export class OpenRouterProvider implements LLMProvider {
       function: {
         name: tool.name,
         description: tool.description,
-        parameters: tool.inputSchema
-      }
+        parameters: tool.inputSchema,
+      },
     }))
 
     const response = await this.client.chat.completions.create({
       model: this.model,
       messages: openaiMessages,
-      ...(openaiTools.length > 0 && { tools: openaiTools })
+      ...(openaiTools.length > 0 && { tools: openaiTools, }),
     })
 
     const choice = response.choices[0]
     if (!choice) throw new Error("No choices returned from OpenRouter")
 
-    const { message } = choice
+    const { message, } = choice
     const result: Message = {
       role: "assistant",
-      content: message.content ?? ""
+      content: message.content ?? "",
     }
 
     if (message.tool_calls && message.tool_calls.length > 0) {
@@ -51,7 +51,7 @@ export class OpenRouterProvider implements LLMProvider {
         .map(tc => ({
           id: tc.id,
           name: tc.function.name,
-          arguments: tc.function.arguments
+          arguments: tc.function.arguments,
         }))
     }
 
@@ -61,14 +61,14 @@ export class OpenRouterProvider implements LLMProvider {
 
 function toOpenAIMessage(message: Message): ChatCompletionMessageParam {
   if (message.role === "system") {
-    return { role: "system", content: message.content }
+    return { role: "system", content: message.content, }
   }
 
   if (message.role === "user") {
     if (message.toolCallId) {
-      return { role: "tool", content: message.content, tool_call_id: message.toolCallId }
+      return { role: "tool", content: message.content, tool_call_id: message.toolCallId, }
     }
-    return { role: "user", content: message.content }
+    return { role: "user", content: message.content, }
   }
 
   // assistant
@@ -79,10 +79,10 @@ function toOpenAIMessage(message: Message): ChatCompletionMessageParam {
       tool_calls: message.toolCalls.map(tc => ({
         id: tc.id,
         type: "function" as const,
-        function: { name: tc.name, arguments: tc.arguments }
-      }))
+        function: { name: tc.name, arguments: tc.arguments, },
+      })),
     }
   }
 
-  return { role: "assistant", content: message.content }
+  return { role: "assistant", content: message.content, }
 }
