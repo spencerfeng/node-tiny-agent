@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint src",
@@ -17,6 +17,7 @@
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/node": "^25.9.3",
     "eslint": "^10.5.0",
+    "tsc-alias": "^1.8.17",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1"
