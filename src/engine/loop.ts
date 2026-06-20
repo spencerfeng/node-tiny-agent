@@ -34,18 +34,26 @@ export class AgentEngine {
       const availableTools = this.registry.getAvailableTools()
 
       // ========== Phase 1: Thinking ==========
+      // The thinking response is injected as a user message so Phase 2 treats it                                                                            
+      // as context/plan rather than a completed assistant turn — preventing the                                                                             
+      // model from thinking the task is already done. 
       if (this.enableThinking) {
         console.log("[Engine][Phase 1] Tools are not provided to force LLM to think deeply and plan")
-        const responseMsg = await this.provider.generate(contextHistory, [])
+        const thinkingMsg = await this.provider.generate(contextHistory, [])
+        console.log("[Engine][Phase 1] thinkingMsg", JSON.stringify(thinkingMsg))
 
-        if (responseMsg.content !== "") {
-          contextHistory.push(responseMsg)
+        if (thinkingMsg.content !== "") {
+          contextHistory.push({                                                                                                                              
+            role: "user",                                                                                                                                    
+            content: `Here is your thinking/plan:\n${thinkingMsg.content}\n\nNow use tools to execute the plan.`,                                            
+          })  
         }
       }
 
       // ========== Phase 2: Action ==========
       console.log("[Engine][Phase 2] Tools are provided, wait for LLM to take actions")
       const responseMsg = await this.provider.generate(contextHistory, availableTools)
+      console.log("[Engine][Phase 2] responseMsg", JSON.stringify(responseMsg))
       contextHistory.push(responseMsg)
 
       if (responseMsg.content !== "") {
