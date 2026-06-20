@@ -6,11 +6,13 @@ export class AgentEngine {
   constructor(
     private provider: LLMProvider,
     private registry: ToolRegistry,
-    private workDir: string
+    private workDir: string,
+    private enableThinking?: boolean
   ) {}
 
   async run(userPrompt: string) {
-    console.log(`Engine started in the working directory ${this.workDir}`)
+    console.log(`[Engine] Engine started in the working directory ${this.workDir}`)
+    console.log(`[Engine] Thinking mode is enabled: ${this.enableThinking}`)
 
     const contextHistory: Message[] = [
       {
@@ -31,10 +33,19 @@ export class AgentEngine {
 
       const availableTools = this.registry.getAvailableTools()
 
-      console.log("[Engine] is thinking\n")
+      // ========== Phase 1: Thinking ==========
+      if (this.enableThinking) {
+        console.log("[Engine][Phase 1] Tools are not provided to force LLM to think deeply and plan")
+        const responseMsg = await this.provider.generate(contextHistory, [])
 
+        if (responseMsg.content !== "") {
+          contextHistory.push(responseMsg)
+        }
+      }
+
+      // ========== Phase 2: Action ==========
+      console.log("[Engine][Phase 2] Tools are provided, wait for LLM to take actions")
       const responseMsg = await this.provider.generate(contextHistory, availableTools)
-
       contextHistory.push(responseMsg)
 
       if (responseMsg.content !== "") {

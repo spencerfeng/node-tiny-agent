@@ -8,7 +8,7 @@ const mockedRegistry = new MockedRegistry()
 const workDir = process.cwd()
 
 const main = async () => {
-  const agentEngine = new AgentEngine(mockedProvider, mockedRegistry, workDir)
+  const agentEngine = new AgentEngine(mockedProvider, mockedRegistry, workDir, true)
 
   await agentEngine.run("Check the files in the current folder")
 }
