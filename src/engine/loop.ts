@@ -1,5 +1,5 @@
 import type { LLMProvider } from "@/provider/provider.js"
-import type { ToolRegistry } from "@/tools/registry.js"
+import { ToolRegistry } from "@/tools/registry.js"
 import type { Message } from "@/types.js"
 
 export class AgentEngine {
