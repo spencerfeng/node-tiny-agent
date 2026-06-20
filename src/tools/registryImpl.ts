@@ -7,7 +7,7 @@ export class registryImpl implements ToolRegistry {
   getAvailableTools(): ToolDefinition[] {
     const defs = []
 
-    for (const tool of Object.values(this.tools)) {
+    for (const tool of this.tools.values()) {
       defs.push(tool.getDefinition())
     }
 
