@@ -60,7 +60,7 @@ export class AgentEngine {
       console.log(`Model needs to call ${responseMsg.toolCalls.length} tools`)
 
       responseMsg.toolCalls.forEach(tc => {
-        console.log(`  -> Call tool: ${tc.name}, arguments: ${tc.arguments}`)
+        console.log(`  -> Call tool: ${tc.name}, args: ${tc.args}`)
 
         const result = this.registry.execute(tc)
 

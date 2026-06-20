@@ -3,7 +3,7 @@ export type Role = "system" | "user" | "assistant"
 export interface ToolCall {
   id: string
   name: string
-  arguments: string
+  args: string
 }
 
 export interface ToolResult {

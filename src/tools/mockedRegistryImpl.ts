@@ -1,5 +1,5 @@
 import type { ToolCall, ToolDefinition, ToolResult } from "@/types.js"
-import type { ToolRegistry } from "./registry.js"
+import type { BaseTool, ToolRegistry } from "./registry.js"
 
 export class MockedRegistry implements ToolRegistry{
   getAvailableTools(): ToolDefinition[] {
@@ -13,4 +13,7 @@ export class MockedRegistry implements ToolRegistry{
       isError: false,
     }
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  register(tool: BaseTool): undefined {}
 }

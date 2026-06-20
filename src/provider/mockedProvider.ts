@@ -20,7 +20,7 @@ export class MockedProvider implements LLMProvider {
           {
             id: "call_123",
             name: "bash",
-            arguments: JSON.stringify({
+            args: JSON.stringify({
               command: "ls -la",
             }),
           }

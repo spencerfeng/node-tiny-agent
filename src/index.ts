@@ -1,7 +1,7 @@
 import process from "node:process"
 import { AgentEngine } from "./engine/loop.js"
 import { MockedProvider } from "./provider/mockedProvider.js"
-import { MockedRegistry } from "./tools/mockedRegistry.js"
+import { MockedRegistry } from "./tools/mockedRegistryImpl.js"
 
 const mockedProvider = new MockedProvider()
 const mockedRegistry = new MockedRegistry()

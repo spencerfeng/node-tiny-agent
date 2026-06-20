@@ -51,7 +51,7 @@ export class OpenRouterProvider implements LLMProvider {
         .map(tc => ({
           id: tc.id,
           name: tc.function.name,
-          arguments: tc.function.arguments,
+          args: tc.function.args,
         }))
     }
 
@@ -79,7 +79,7 @@ function toOpenAIMessage(message: Message): ChatCompletionMessageParam {
       tool_calls: message.toolCalls.map(tc => ({
         id: tc.id,
         type: "function" as const,
-        function: { name: tc.name, arguments: tc.arguments, },
+        function: { name: tc.name, args: tc.args, },
       })),
     }
   }
