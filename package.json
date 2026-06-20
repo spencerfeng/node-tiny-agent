@@ -23,6 +23,7 @@
     "typescript-eslint": "^8.61.1"
   },
   "dependencies": {
-    "openai": "^6.44.0"
+    "openai": "^6.44.0",
+    "zod": "^4.4.3"
   }
 }
