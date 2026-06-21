@@ -6,6 +6,7 @@ import { ToolRegistry } from "./tools/registry.js"
 import { ReadFileTool } from "./tools/readFileTool.js"
 import { WriteFileTool } from "./tools/writeFileTool.js"
 import { EditFileTool } from "./tools/editFileTool.js"
+import { Bot } from "./telegram/bot.js"
 
 const workDir = process.env["WORD_DIR"] ?? process.cwd()
 
@@ -20,12 +21,12 @@ registry.register(readFileTool)
 registry.register(writeFileTool)
 registry.register(editFileTool)
 
-const main = async () => {
-  const agentEngine = new AgentEngine(provider, registry, workDir, true)
+const telegramBot = new Bot()
 
-  await agentEngine.run("Edit the index.js file to calcualte the sum of 2 + 4 in the workDir and return the result. Create the file if it does not exist.")
+const main = () => {
+  const agentEngine = new AgentEngine(provider, registry, workDir, true)
+  telegramBot.listenForMessage(agentEngine)
 }
 
-main().catch(error => {
-  console.error(error)
-})
+main()
+

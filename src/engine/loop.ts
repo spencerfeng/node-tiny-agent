@@ -1,6 +1,7 @@
 import type { LLMProvider } from "@/provider/provider.js"
 import { ToolRegistry } from "@/tools/registry.js"
 import type { Message } from "@/types.js"
+import type { Reporter } from "./reporter.js"
 
 export class AgentEngine {
   constructor(
@@ -10,7 +11,7 @@ export class AgentEngine {
     private enableThinking?: boolean
   ) {}
 
-  async run(userPrompt: string) {
+  async run(userPrompt: string, reporter: Reporter, chatId: number) {
     console.log(`[Engine] Engine started in the working directory ${this.workDir}`)
     console.log(`[Engine] Thinking mode is enabled: ${this.enableThinking}`)
 
@@ -38,6 +39,8 @@ export class AgentEngine {
       // as context/plan rather than a completed assistant turn — preventing the                                                                             
       // model from thinking the task is already done. 
       if (this.enableThinking) {
+        await reporter.onThinking(chatId)
+
         console.log("[Engine][Phase 1] Tools are not provided to force LLM to think deeply and plan")
         const thinkingMsg = await this.provider.generate(contextHistory, [])
         console.log("[Engine][Phase 1] thinkingMsg", JSON.stringify(thinkingMsg))
@@ -67,19 +70,23 @@ export class AgentEngine {
 
       if (!responseMsg.toolCalls?.length) {
         console.log("[Engine] task completed and exits the loop")
+        reporter.onMessage(chatId, responseMsg.content)
         break
       }
 
       console.log(`Model needs to call ${responseMsg.toolCalls.length} tools`)
 
-      responseMsg.toolCalls.forEach(tc => {
+      for (const tc of responseMsg.toolCalls) {
+        await reporter.onToolCall(chatId, tc.name, tc.args)
         console.log(`  -> Call tool: ${tc.name}, args: ${tc.args}`)
 
         const result = this.registry.execute(tc)
 
         if (result.isError) {
+          await reporter.onToolResult(chatId, tc.name, result.output, true)
           console.log(`  -> ❌ Tool calling throws an error: ${result.output}\n`)
         } else {
+          await reporter.onToolResult(chatId, tc.name, result.output, false)
           console.log(`  -> ✅ Tool calling is successful and returns: ${result.output}\n`)
         }
 
@@ -89,8 +96,10 @@ export class AgentEngine {
           toolCallId: tc.id,
         }
 
+        await reporter.onMessage(chatId, result.output)
+
         contextHistory.push(observationMsg)
-      })
+      }
     }
   }
 }
