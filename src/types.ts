@@ -24,3 +24,10 @@ export interface ToolDefinition {
   description: string
   inputSchema: Record<string, unknown>
 }
+
+export interface Session {
+  id: number
+  createdAt: Date
+  updatedAt: Date
+  history: Message[]
+}

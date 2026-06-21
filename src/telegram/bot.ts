@@ -1,6 +1,8 @@
 import type { AgentEngine } from "@/engine/loop.js"
 import type { Reporter } from "@/engine/reporter.js"
-import TelegramBot, { type Message } from "node-telegram-bot-api"
+import { type SessionsManager, SessionManager } from "@/engine/session.js"
+import type { Message } from "@/types.js"
+import TelegramBot, { type Message as TelegramMessage } from "node-telegram-bot-api"
 
 export class Bot implements Reporter {
   private bot: TelegramBot
@@ -14,27 +16,35 @@ export class Bot implements Reporter {
     this.bot = new TelegramBot(token, { polling: true, })
   }
 
-  listenForMessage(agentEngine: AgentEngine) {
-    this.bot.on("message", async (msg: Message) => {
+  listenForMessage(agentEngineFactoryFunc: () => AgentEngine, sessionsManager: SessionsManager) {
+    this.bot.on("message", async (msg: TelegramMessage) => {
       const chatId = msg.chat.id
 
       await this.bot.sendMessage(chatId, "Received your message")
 
+      const session = sessionsManager.createOrGetSession(chatId)
+      const sessionManager = new SessionManager(session)
+
       if (msg.text) {
-        await agentEngine.run(msg.text, this, chatId)
+        const message: Message = {
+          role: "user",
+          content: msg.text,
+        }
+        sessionManager.addMessage(message)
+        await agentEngineFactoryFunc().run(sessionManager, this, chatId)
       }
     })
   }
 
-  async onThinking(chatId: number) {
+  async onThinking(chatId: number): Promise<void> {
     await this.bot.sendMessage(chatId, "🙇 I am thinking")
   }
 
-  async onToolCall(chatId: number, toolName: string, args: string) {
+  async onToolCall(chatId: number, toolName: string, args: string): Promise<void> {
     await this.bot.sendMessage(chatId, `🔨 I am calling the tool: ${toolName} with the arguments: ${args}`)
   }
 
-  async onToolResult(chatId: number, toolName: string, result: string, isError: boolean) {
+  async onToolResult(chatId: number, toolName: string, result: string, isError: boolean): Promise<void> {
     if (isError) {
       await this.bot.sendMessage(chatId, `❌ Calling the tool: ${toolName} failed with an error: ${result}`)
       return
@@ -43,7 +53,7 @@ export class Bot implements Reporter {
     await this.bot.sendMessage(chatId, `✅ Calling the tool: ${toolName} succeeded`)
   }
 
-  async onMessage(chatId: number, content: string) {
+  async onMessage(chatId: number, content: string): Promise<void> {
     await this.bot.sendMessage(chatId, `✉️ ${content}`)
   }
 }

@@ -2,6 +2,7 @@ import type { LLMProvider } from "@/provider/provider.js"
 import { ToolRegistry } from "@/tools/registry.js"
 import type { Message } from "@/types.js"
 import type { Reporter } from "./reporter.js"
+import type { SessionManager } from "./session.js"
 
 export class AgentEngine {
   constructor(
@@ -11,20 +12,14 @@ export class AgentEngine {
     private enableThinking?: boolean
   ) {}
 
-  async run(userPrompt: string, reporter: Reporter, chatId: number) {
+  async run(sessionManager: SessionManager, reporter: Reporter, chatId: number) {
     console.log(`[Engine] Engine started in the working directory ${this.workDir}`)
     console.log(`[Engine] Thinking mode is enabled: ${this.enableThinking}`)
 
-    const contextHistory: Message[] = [
-      {
-        role: "system",
-        content: "You are node-tiny-agent, an expert coding assistant. You have full access to tools in the workspace. When modifying an existing file, always prefer edit_file over write_file — only use write_file to create new files or when a full rewrite is explicitly required.",
-      },
-      {
-        role: "user",
-        content: userPrompt,
-      }
-    ]
+    const systemMessage: Message = {
+      role: "system",
+      content: "You are node-tiny-agent, an expert coding assistant. You have full access to tools in the workspace. When modifying an existing file, always prefer edit_file over write_file — only use write_file to create new files or when a full rewrite is explicitly required.",
+    }
 
     let turnCount = 0
 
@@ -33,6 +28,12 @@ export class AgentEngine {
       console.log(`========== [Turn ${turnCount}] started ==========\n`)
 
       const availableTools = this.registry.getAvailableTools()
+
+      const workingMemory = sessionManager.getWorkingMemory(10)
+
+      const contextHistory = []
+      contextHistory.push(systemMessage)
+      contextHistory.push(...workingMemory)
 
       // ========== Phase 1: Thinking ==========
       // The thinking response is injected as a user message so Phase 2 treats it                                                                            
@@ -51,10 +52,12 @@ export class AgentEngine {
         // the task is done, so it skips actually calling the tool.
         const thinkingContent = thinkingMsg.content.replace(/<｜tool▁calls▁begin｜>[\s\S]*$/, "").trim()
         if (thinkingContent !== "") {
-          contextHistory.push({
+          const thinkingPlanMessage: Message = {
             role: "user",
             content: `Here is your thinking/plan:\n${thinkingContent}\n\nNow use tools to execute the plan.`,
-          })
+          }
+          sessionManager.addMessage(thinkingPlanMessage)
+          contextHistory.push(thinkingPlanMessage)
         }
       }
 
@@ -62,6 +65,8 @@ export class AgentEngine {
       console.log("[Engine][Phase 2] Tools are provided, wait for LLM to take actions")
       const responseMsg = await this.provider.generate(contextHistory, availableTools)
       console.log("[Engine][Phase 2] responseMsg", JSON.stringify(responseMsg))
+
+      sessionManager.addMessage(responseMsg)
       contextHistory.push(responseMsg)
 
       if (responseMsg.content !== "") {
@@ -98,7 +103,7 @@ export class AgentEngine {
 
         await reporter.onMessage(chatId, result.output)
 
-        contextHistory.push(observationMsg)
+        sessionManager.addMessage(observationMsg)
       }
     }
   }

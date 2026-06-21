@@ -8,10 +8,11 @@ import { WriteFileTool } from "./tools/writeFileTool.js"
 import { EditFileTool } from "./tools/editFileTool.js"
 import { Bot } from "./telegram/bot.js"
 import { BashTool } from "./tools/bashTool.js"
+import { SessionsManager } from "./engine/session.js"
 
 const workDir = process.env["WORD_DIR"] ?? process.cwd()
-
 const provider = new OpenRouterProvider("deepseek/deepseek-chat-v3.1")
+const sessionsManager = new SessionsManager()
 
 const readFileTool = new ReadFileTool(workDir)
 const writeFileTool = new WriteFileTool(workDir)
@@ -27,8 +28,7 @@ registry.register(bashTool)
 const telegramBot = new Bot()
 
 const main = () => {
-  const agentEngine = new AgentEngine(provider, registry, workDir, true)
-  telegramBot.listenForMessage(agentEngine)
+  telegramBot.listenForMessage(() => new AgentEngine(provider, registry, workDir, true), sessionsManager)
 }
 
 main()
