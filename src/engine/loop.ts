@@ -17,7 +17,7 @@ export class AgentEngine {
     const contextHistory: Message[] = [
       {
         role: "system",
-        content: "You are node-tiny-agent, an expert coding assistant. You have the full access to tools in the workspace",
+        content: "You are node-tiny-agent, an expert coding assistant. You have full access to tools in the workspace. When modifying an existing file, always prefer edit_file over write_file — only use write_file to create new files or when a full rewrite is explicitly required.",
       },
       {
         role: "user",
@@ -42,11 +42,16 @@ export class AgentEngine {
         const thinkingMsg = await this.provider.generate(contextHistory, [])
         console.log("[Engine][Phase 1] thinkingMsg", JSON.stringify(thinkingMsg))
 
-        if (thinkingMsg.content !== "") {
-          contextHistory.push({                                                                                                                              
-            role: "user",                                                                                                                                    
-            content: `Here is your thinking/plan:\n${thinkingMsg.content}\n\nNow use tools to execute the plan.`,                                            
-          })  
+        // Strip any leaked internal tool-call tokens (model-specific artefacts)
+        // Otherwise if it leaks into the context as part of the "plan" message,
+        // Phase 2 sees it and interprets it as if the tool was already called and
+        // the task is done, so it skips actually calling the tool.
+        const thinkingContent = thinkingMsg.content.replace(/<｜tool▁calls▁begin｜>[\s\S]*$/, "").trim()
+        if (thinkingContent !== "") {
+          contextHistory.push({
+            role: "user",
+            content: `Here is your thinking/plan:\n${thinkingContent}\n\nNow use tools to execute the plan.`,
+          })
         }
       }
 
