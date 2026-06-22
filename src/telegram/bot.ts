@@ -54,6 +54,6 @@ export class Bot implements Reporter {
   }
 
   async onMessage(chatId: number, content: string): Promise<void> {
-    await this.bot.sendMessage(chatId, `✉️ ${content}`)
+    await this.bot.sendMessage(chatId, `✉️ ${content}`, { parse_mode: "Markdown", })
   }
 }
