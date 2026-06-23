@@ -5,23 +5,25 @@ import type { Reporter } from "./reporter.js"
 import type { SessionManager } from "./session.js"
 import { globalApprovalManager, isDangerousCommand } from "@/telegram/approval.js"
 import type { Bot } from "@/telegram/bot.js"
+import { PromptComposer } from "./promptComposer.js"
 
 export class AgentEngine {
+  private promptComposer: PromptComposer
+
   constructor(
     private provider: LLMProvider,
     private registry: ToolRegistry,
     private workDir: string,
     private enableThinking?: boolean
-  ) {}
+  ) {
+    this.promptComposer = new PromptComposer(workDir)
+  }
 
   async run(sessionManager: SessionManager, botWithReporter: Reporter & Bot, chatId: number) {
     console.log(`[Engine] Engine started in the working directory ${this.workDir}`)
     console.log(`[Engine] Thinking mode is enabled: ${this.enableThinking}`)
 
-    const systemMessage: Message = {
-      role: "system",
-      content: "You are node-tiny-agent, an expert coding assistant. You have full access to tools in the workspace. When modifying an existing file, always prefer edit_file over write_file — only use write_file to create new files or when a full rewrite is explicitly required.",
-    }
+    const systemMessage: Message = this.promptComposer.build()
 
     let turnCount = 0
 
