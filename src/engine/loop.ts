@@ -6,9 +6,11 @@ import type { SessionManager } from "./session.js"
 import { globalApprovalManager, isDangerousCommand } from "@/telegram/approval.js"
 import type { Bot } from "@/telegram/bot.js"
 import { PromptComposer } from "./promptComposer.js"
+import { Compactor } from "./compactor.js"
 
 export class AgentEngine {
   private promptComposer: PromptComposer
+  private compactor: Compactor
 
   constructor(
     private provider: LLMProvider,
@@ -17,6 +19,7 @@ export class AgentEngine {
     private enableThinking?: boolean
   ) {
     this.promptComposer = new PromptComposer(workDir)
+    this.compactor = new Compactor(30000, 6)
   }
 
   async run(sessionManager: SessionManager, botWithReporter: Reporter & Bot, chatId: number) {
@@ -33,21 +36,23 @@ export class AgentEngine {
 
       const availableTools = this.registry.getAvailableTools()
 
-      const workingMemory = sessionManager.getWorkingMemory(10)
+      const workingMemory = sessionManager.getWorkingMemory(20)
 
-      const contextHistory = []
-      contextHistory.push(systemMessage)
-      contextHistory.push(...workingMemory)
+      const contextHistory: Message[] = [ systemMessage, ...workingMemory ]
+
+      // Compact before sending to the LLM — only affects what the model sees,
+      // session writes always use the full original messages.
+      let compactedContext = this.compactor.compact(contextHistory)
 
       // ========== Phase 1: Thinking ==========
-      // The thinking response is injected as a user message so Phase 2 treats it                                                                            
-      // as context/plan rather than a completed assistant turn — preventing the                                                                             
-      // model from thinking the task is already done. 
+      // The thinking response is injected as a user message so Phase 2 treats it
+      // as context/plan rather than a completed assistant turn — preventing the
+      // model from thinking the task is already done.
       if (this.enableThinking) {
         await botWithReporter.onThinking(chatId)
 
         console.log("[Engine][Phase 1] Tools are not provided to force LLM to think deeply and plan")
-        const thinkingMsg = await this.provider.generate(contextHistory, [])
+        const thinkingMsg = await this.provider.generate(compactedContext, [])
         console.log("[Engine][Phase 1] thinkingMsg", JSON.stringify(thinkingMsg))
 
         // Strip any leaked internal tool-call tokens (model-specific artefacts)
@@ -61,13 +66,13 @@ export class AgentEngine {
             content: `Here is your thinking/plan:\n${thinkingContent}\n\nNow use tools to execute the plan.`,
           }
           sessionManager.addMessage(thinkingPlanMessage)
-          contextHistory.push(thinkingPlanMessage)
+          compactedContext = [ ...compactedContext, thinkingPlanMessage ]
         }
       }
 
       // ========== Phase 2: Action ==========
       console.log("[Engine][Phase 2] Tools are provided, wait for LLM to take actions")
-      const responseMsg = await this.provider.generate(contextHistory, availableTools)
+      const responseMsg = await this.provider.generate(compactedContext, availableTools)
       console.log("[Engine][Phase 2] responseMsg", JSON.stringify(responseMsg))
 
       sessionManager.addMessage(responseMsg)
