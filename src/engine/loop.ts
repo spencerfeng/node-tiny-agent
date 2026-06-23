@@ -3,6 +3,8 @@ import { ToolRegistry } from "@/tools/registry.js"
 import type { Message } from "@/types.js"
 import type { Reporter } from "./reporter.js"
 import type { SessionManager } from "./session.js"
+import { globalApprovalManager, isDangerousCommand } from "@/telegram/approval.js"
+import type { Bot } from "@/telegram/bot.js"
 
 export class AgentEngine {
   constructor(
@@ -12,7 +14,7 @@ export class AgentEngine {
     private enableThinking?: boolean
   ) {}
 
-  async run(sessionManager: SessionManager, reporter: Reporter, chatId: number) {
+  async run(sessionManager: SessionManager, botWithReporter: Reporter & Bot, chatId: number) {
     console.log(`[Engine] Engine started in the working directory ${this.workDir}`)
     console.log(`[Engine] Thinking mode is enabled: ${this.enableThinking}`)
 
@@ -40,7 +42,7 @@ export class AgentEngine {
       // as context/plan rather than a completed assistant turn — preventing the                                                                             
       // model from thinking the task is already done. 
       if (this.enableThinking) {
-        await reporter.onThinking(chatId)
+        await botWithReporter.onThinking(chatId)
 
         console.log("[Engine][Phase 1] Tools are not provided to force LLM to think deeply and plan")
         const thinkingMsg = await this.provider.generate(contextHistory, [])
@@ -75,23 +77,39 @@ export class AgentEngine {
 
       if (!responseMsg.toolCalls?.length) {
         console.log("[Engine] task completed and exits the loop")
-        reporter.onMessage(chatId, responseMsg.content)
+        botWithReporter.onMessage(chatId, responseMsg.content)
         break
       }
 
       console.log(`Model needs to call ${responseMsg.toolCalls.length} tools`)
 
       for (const tc of responseMsg.toolCalls) {
-        await reporter.onToolCall(chatId, tc.name, tc.args)
+        if (isDangerousCommand(tc.name, tc.args)) {
+          const taskId = crypto.randomUUID()
+          const result = await globalApprovalManager.waitForApproval(taskId, tc.name, tc.args, botWithReporter.getTelegramBot(), chatId)
+
+          if (!result.allowed) {
+            const observationMsg: Message = {
+              role: "user",
+              content: `Execution halted by human operator for tool call: ${tc.name}. Reason: ${result.reason}`,
+              toolCallId: tc.id,
+            }
+
+            sessionManager.addMessage(observationMsg)
+            break
+          }
+        }
+
+        await botWithReporter.onToolCall(chatId, tc.name, tc.args)
         console.log(`  -> Call tool: ${tc.name}, args: ${tc.args}`)
 
         const result = this.registry.execute(tc)
 
         if (result.isError) {
-          await reporter.onToolResult(chatId, tc.name, result.output, true)
+          await botWithReporter.onToolResult(chatId, tc.name, result.output, true)
           console.log(`  -> ❌ Tool calling throws an error: ${result.output}\n`)
         } else {
-          await reporter.onToolResult(chatId, tc.name, result.output, false)
+          await botWithReporter.onToolResult(chatId, tc.name, result.output, false)
           console.log(`  -> ✅ Tool calling is successful and returns: ${result.output}\n`)
         }
 
@@ -101,7 +119,7 @@ export class AgentEngine {
           toolCallId: tc.id,
         }
 
-        await reporter.onMessage(chatId, result.output)
+        await botWithReporter.onMessage(chatId, result.output)
 
         sessionManager.addMessage(observationMsg)
       }
