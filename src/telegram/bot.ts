@@ -67,23 +67,31 @@ export class Bot implements Reporter {
   }
 
   async onToolCall(chatId: number, toolName: string, args: string): Promise<void> {
-    await this.bot.sendMessage(chatId, `🔨 I am calling the tool: ${toolName} with the arguments: ${args}`)
+    const maxArgLen = 200
+    const displayArgs = args.length > maxArgLen ? `${args.slice(0, maxArgLen)}...[truncated]` : args
+    await this.bot.sendMessage(chatId, `🔨 Calling tool: ${toolName}\nArgs: ${displayArgs}`)
   }
 
   async onToolResult(chatId: number, toolName: string, result: string, isError: boolean): Promise<void> {
     if (isError) {
-      await this.bot.sendMessage(chatId, `❌ Calling the tool: ${toolName} failed with an error: ${result}`)
+      const maxLen = 300
+      const displayResult = result.length > maxLen ? `${result.slice(0, maxLen)}...[truncated]` : result
+      await this.bot.sendMessage(chatId, `❌ Tool: ${toolName} failed\n${displayResult}`)
       return
     }
 
-    await this.bot.sendMessage(chatId, `✅ Calling the tool: ${toolName} succeeded`)
+    await this.bot.sendMessage(chatId, `✅ Tool: ${toolName} succeeded`)
   }
 
   async onMessage(chatId: number, content: string): Promise<void> {
+    const maxLen = 3800
+    const displayContent = content.length > maxLen
+      ? `${content.slice(0, maxLen)}\n\n...[truncated]`
+      : content
     try {
-      await this.bot.sendMessage(chatId, `✉️ ${content}`, { parse_mode: "Markdown", })
+      await this.bot.sendMessage(chatId, `✉️ ${displayContent}`, { parse_mode: "Markdown", })
     } catch {
-      await this.bot.sendMessage(chatId, `✉️ ${content}`)
+      await this.bot.sendMessage(chatId, `✉️ ${displayContent}`)
     }
   }
 }

@@ -11,7 +11,7 @@ import { BashTool } from "./tools/bashTool.js"
 import { SessionsManager } from "./engine/session.js"
 
 const workDir = process.env["WORD_DIR"] ?? process.cwd()
-const provider = new OpenRouterProvider("deepseek/deepseek-chat-v3.1")
+const provider = new OpenRouterProvider("anthropic/claude-sonnet-4.6")
 const sessionsManager = new SessionsManager()
 
 const readFileTool = new ReadFileTool(workDir)
@@ -28,7 +28,9 @@ registry.register(bashTool)
 const telegramBot = new Bot()
 
 const main = () => {
-  telegramBot.listenForMessage(() => new AgentEngine(provider, registry, workDir, true), sessionsManager)
+  const enableThinking = false
+  const planMode = true
+  telegramBot.listenForMessage(() => new AgentEngine(provider, registry, workDir, enableThinking, planMode), sessionsManager)
 }
 
 main()

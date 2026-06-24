@@ -16,9 +16,10 @@ export class AgentEngine {
     private provider: LLMProvider,
     private registry: ToolRegistry,
     private workDir: string,
-    private enableThinking?: boolean
+    private enableThinking?: boolean,
+    planMode?: boolean
   ) {
-    this.promptComposer = new PromptComposer(workDir)
+    this.promptComposer = new PromptComposer(workDir, planMode ?? false)
     this.compactor = new Compactor(30000, 6)
   }
 
